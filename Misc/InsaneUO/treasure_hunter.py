@@ -34,7 +34,8 @@ SECTION = "Settings"
 DEFAULTS = {
     "gumpX": "0",
     "gumpY": "0",
-    "use_lootmaster": "False"
+    "use_lootmaster": "False",
+    "loot_gold": "False"
 }
 
 config = configparser.ConfigParser()
@@ -50,8 +51,8 @@ if SECTION not in config:
 gumpX = config.getint(SECTION, "gumpX", fallback=0)
 gumpY = config.getint(SECTION, "gumpY", fallback=0)
 use_lootmaster = config.getboolean(SECTION, "use_lootmaster", fallback=False)
+loot_gold = config.getboolean(SECTION, "loot_gold", fallback=False)
 
-API.SysMsg(str(use_lootmaster))
 ##################################################
 
 def save():
@@ -388,15 +389,15 @@ title.SetX(200)
 title.SetY(0)
 gumpoptions.Add(title)
 
-title = API.CreateGumpLabel("Use Lootmaster", 0)
-title.SetX(10)
-title.SetY(30)
-gumpoptions.Add(title)
-
-rb1 = API.CreateGumpRadioButton("", 1, isChecked = use_lootmaster)
-rb1.SetX(110)
+rb1 = API.CreateGumpRadioButton("Use Lootmaster", 1, isChecked = use_lootmaster)
+rb1.SetX(10)
 rb1.SetY(30)
 gumpoptions.Add(rb1)
+
+rb2 = API.CreateGumpRadioButton("Loot Gold", 1, isChecked = loot_gold)
+rb2.SetX(10)
+rb2.SetY(50)
+gumpoptions.Add(rb2)
 
 API.AddGump(gumpoptions) # Add the gump to the game
 
@@ -568,7 +569,15 @@ while not gump.IsDisposed: #Stop the script if the gump is closed
         gumpoptions.IsVisible = not gumpoptions.IsVisible
     if rb1.IsChecked != use_lootmaster:
         use_lootmaster = rb1.IsChecked
+        if rb1.IsChecked:
+            rb2.IsChecked = False
         config[SECTION]["use_lootmaster"] = str(use_lootmaster)
+        save()
+    if rb2.IsChecked != loot_gold:
+        loot_gold = rb2.IsChecked
+        if rb2.IsChecked:
+            rb1.IsChecked = False
+        config[SECTION]["loot_gold"] = str(loot_gold)
         save()
 
     
