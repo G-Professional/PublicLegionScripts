@@ -815,29 +815,30 @@ while not gump.IsDisposed: #Stop the script if the gump is closed
         if DEBUG: API.SysMsg("[DEBUG] Chest status == 3 (loot)")
         API.UseObject(tchest)
         API.Pause(1)
-        if use_lootmaster:
-            if findBags(tchest):
-                for bag in findBags(tchest):
-                    for a in range(0,6):
+        
+        if findBags(tchest):
+            for bag in findBags(tchest):
+                for a in range(0,6):
+                    if use_lootmaster:
                         if not API.HasTarget():
                             API.ReplyGump(12, 0xD06EAF) #This is the "Open" button on the chest gump
                             API.WaitForTarget("any",1)
                             continue
                         if API.HasTarget():
                             break
-                    if bag != None:
+                    if bag != None: #This is the pause for item looting
                         API.Target(bag)
                         for i in range(API.Contents(bag)):
                             API.Pause(2)
                         API.Pause(2)
-            for a in range(0,6):
-                if not API.HasTarget():
-                    API.ReplyGump(12, 0xd06eaf)
-                    API.WaitForTarget("any",1)
-                    continue
-                if API.HasTarget():
-                            API.Target(tchest.Serial)
-                            break
+        for a in range(0,6):
+            if not API.HasTarget():
+                API.ReplyGump(12, 0xd06eaf)
+                API.WaitForTarget("any",1)
+                continue
+            if API.HasTarget():
+                        API.Target(tchest.Serial)
+                        break
         #Reset values to recalculate rune
 
 
