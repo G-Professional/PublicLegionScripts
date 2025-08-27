@@ -36,7 +36,8 @@ DEFAULTS = {
     "gumpY": "0",
     "use_lootmaster": "False",
     "loot_gold": "False",
-    "loot_insanetokens": "False"
+    "loot_insanetokens": "False",
+    "gold1x1": "False"
 }
 
 config = configparser.ConfigParser()
@@ -54,6 +55,7 @@ gumpY = config.getint(SECTION, "gumpY", fallback=0)
 use_lootmaster = config.getboolean(SECTION, "use_lootmaster", fallback=False)
 loot_gold = config.getboolean(SECTION, "loot_gold", fallback=False)
 loot_insanetokens = config.getboolean(SECTION, "loot_insanetokens", fallback=False)
+gold1x1 = config.getboolean(SECTION, "gold1x1", fallback=False)
 
 ##################################################
 
@@ -409,6 +411,11 @@ rb3.SetX(10)
 rb3.SetY(70)
 gumpoptions.Add(rb3)
 
+rb4 = API.CreateGumpRadioButton("gold1x1", 3, isChecked = gold1x1)
+rb4.SetX(10)
+rb4.SetY(90)
+gumpoptions.Add(rb4)
+
 API.AddGump(gumpoptions) # Add the gump to the game
 
 ##################################################
@@ -595,6 +602,12 @@ while not gump.IsDisposed: #Stop the script if the gump is closed
         #     rb1.IsChecked = False
         config[SECTION]["loot_insanetokens"] = str(loot_insanetokens)
         save()
+    if rb4.IsChecked != gold1x1:
+        gold1x1 = rb4.IsChecked
+        # if rb3.IsChecked:
+        #     rb1.IsChecked = False
+        config[SECTION]["gold1x1"] = str(gold1x1)
+        save()
     
 
     status = 0
@@ -739,7 +752,7 @@ while not gump.IsDisposed: #Stop the script if the gump is closed
                 API.RemoveMarkedTile(location[0], location[1], facettoint(facet))
                 API.MarkTile(location[0], location[1], 1170, facettoint(facet))
         except Exception as e:
-            API.SysMsg(f"Waypoint error: {e}")
+            API.SysMsg(f"Waypoint error: {e}",33)
 
     if coordstatus == 2 and status == 0:
         if currentFacet(facet)[1] != currentFacet(API.GetMap())[1]:
@@ -858,16 +871,22 @@ while not gump.IsDisposed: #Stop the script if the gump is closed
             if findBags(tchest):
                 for bag in findBags(tchest):
                     API.UseObject(bag)
-                    while API.FindType(3821,bag) != None:
+                    API.Pause(.2) #Pause is necessary here otherwise items will not load into the Find function
+                    while API.FindTypeAll(3821,bag):
+                        if gold1x1:
+                            gold = API.FindType(3821,bag)
+                            API.MoveItem(gold,API.Backpack,1)
+                            API.Pause(.6)
+                            continue
                         golds = API.FindTypeAll(3821,bag)
                         for gold in golds:
-                            API.SysMsg(str(gold))
+                            API.SysMsg(str(gold),33)
                             API.MoveItem(gold.Serial,API.Backpack)
                             if API.Player.Weight/API.Player.WeightMax > 1:
                                 API.SysMsg("Inventory full, offload some weight.", 33)
                                 API.Pause(3)
                             API.Pause(2)
-            API.Pause(2)
+                    API.Pause(2)
 
         if loot_insanetokens:
             while API.FindType(3824,tchest) != None:
@@ -877,6 +896,14 @@ while not gump.IsDisposed: #Stop the script if the gump is closed
                     API.Pause(2)
                 
         #Reset values to recalculate rune
+        coordstatus = 0
+        status = 0
+        compass_update(None,None)
+        try:
+            API.RemoveMapMarker('Treasure')
+            API.RemoveMarkedTile(location[0], location[1], facettoint(facet)) # We want this because otherwise TazUO permasaves the marked tile.
+        except:
+            pass
 
 
 #ON EXIT:
