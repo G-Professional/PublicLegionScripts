@@ -35,7 +35,8 @@ DEFAULTS = {
     "gumpX": "0",
     "gumpY": "0",
     "use_lootmaster": "False",
-    "loot_gold": "False"
+    "loot_gold": "False",
+    "loot_insanetokens": "False"
 }
 
 config = configparser.ConfigParser()
@@ -52,6 +53,7 @@ gumpX = config.getint(SECTION, "gumpX", fallback=0)
 gumpY = config.getint(SECTION, "gumpY", fallback=0)
 use_lootmaster = config.getboolean(SECTION, "use_lootmaster", fallback=False)
 loot_gold = config.getboolean(SECTION, "loot_gold", fallback=False)
+loot_insanetokens = config.getboolean(SECTION, "loot_insanetokens", fallback=False)
 
 ##################################################
 
@@ -151,9 +153,12 @@ def findBook(bookname):
 
 def findBags(tchest):
     bagsList = []
-    bagsList.append(API.FindType(0xA331,tchest.Serial))
-    bagsList.append(API.FindType(0xA32F,tchest.Serial))
-    bagsList.append(API.FindType(0xA333,tchest.Serial))
+    if API.FindType(0xA331,tchest.Serial) != None:
+        bagsList.append(API.FindType(0xA331,tchest.Serial))
+    if API.FindType(0xA32F,tchest.Serial) != None:
+        bagsList.append(API.FindType(0xA32F,tchest.Serial))
+    if API.FindType(0xA333,tchest.Serial) != None:
+        bagsList.append(API.FindType(0xA333,tchest.Serial))
     if bagsList:
         return bagsList
     return None
@@ -399,6 +404,11 @@ rb2.SetX(10)
 rb2.SetY(50)
 gumpoptions.Add(rb2)
 
+rb3 = API.CreateGumpRadioButton("Loot Insane Tokens", 2, isChecked = loot_insanetokens)
+rb3.SetX(10)
+rb3.SetY(70)
+gumpoptions.Add(rb3)
+
 API.AddGump(gumpoptions) # Add the gump to the game
 
 ##################################################
@@ -569,17 +579,22 @@ while not gump.IsDisposed: #Stop the script if the gump is closed
         gumpoptions.IsVisible = not gumpoptions.IsVisible
     if rb1.IsChecked != use_lootmaster:
         use_lootmaster = rb1.IsChecked
-        if rb1.IsChecked:
-            rb2.IsChecked = False
+        # if rb1.IsChecked:
+        #     rb2.IsChecked = False
         config[SECTION]["use_lootmaster"] = str(use_lootmaster)
         save()
     if rb2.IsChecked != loot_gold:
         loot_gold = rb2.IsChecked
-        if rb2.IsChecked:
-            rb1.IsChecked = False
+        # if rb2.IsChecked:
+        #     rb1.IsChecked = False
         config[SECTION]["loot_gold"] = str(loot_gold)
         save()
-
+    if rb3.IsChecked != loot_insanetokens:
+        loot_insanetokens = rb3.IsChecked
+        # if rb3.IsChecked:
+        #     rb1.IsChecked = False
+        config[SECTION]["loot_insanetokens"] = str(loot_insanetokens)
+        save()
     
 
     status = 0
@@ -715,12 +730,12 @@ while not gump.IsDisposed: #Stop the script if the gump is closed
             #if DEBUG: API.SysMsg(f"Map X:{location[0]} Y:{location[1]} Z:{tileheight} -> Tracking X:{X} Y:{Y} Zoffset:{zoffset}")
             compass_update(location[0], location[1])
             API.RemoveMapMarker('Treasure')
-            API.AddMapMarker('Treasure', location[0], location[1], API.GetMap(), color="yellow")
+            API.AddMapMarker('Treasure', location[0], location[1], facettoint(facet), color="yellow")
             API.RemoveMarkedTile(location[0], location[1], facettoint(facet))
             API.MarkTile(location[0], location[1], 1177, facettoint(facet))
             if n & 1:
                 API.RemoveMapMarker('Treasure')
-                API.AddMapMarker('Treasure', location[0], location[1], API.GetMap(), color="purple")
+                API.AddMapMarker('Treasure', location[0], location[1], facettoint(facet), color="purple")
                 API.RemoveMarkedTile(location[0], location[1], facettoint(facet))
                 API.MarkTile(location[0], location[1], 1170, facettoint(facet))
         except Exception as e:
@@ -816,10 +831,10 @@ while not gump.IsDisposed: #Stop the script if the gump is closed
         API.UseObject(tchest)
         API.Pause(1)
         
-        if findBags(tchest):
-            for bag in findBags(tchest):
-                for a in range(0,6):
-                    if use_lootmaster:
+        if use_lootmaster:
+            if findBags(tchest):
+                for bag in findBags(tchest):
+                    for a in range(0,6):
                         if not API.HasTarget():
                             API.ReplyGump(12, 0xD06EAF) #This is the "Open" button on the chest gump
                             API.WaitForTarget("any",1)
@@ -831,14 +846,36 @@ while not gump.IsDisposed: #Stop the script if the gump is closed
                         for i in range(API.Contents(bag)):
                             API.Pause(2)
                         API.Pause(2)
-        for a in range(0,6):
-            if not API.HasTarget():
-                API.ReplyGump(12, 0xd06eaf)
-                API.WaitForTarget("any",1)
-                continue
-            if API.HasTarget():
-                        API.Target(tchest.Serial)
-                        break
+            for a in range(0,6):
+                if not API.HasTarget():
+                    API.ReplyGump(12, 0xd06eaf)
+                    API.WaitForTarget("any",1)
+                    continue
+                if API.HasTarget():
+                            API.Target(tchest.Serial)
+                            break
+        if loot_gold:
+            if findBags(tchest):
+                for bag in findBags(tchest):
+                    API.UseObject(bag)
+                    while API.FindType(3821,bag) != None:
+                        golds = API.FindTypeAll(3821,bag)
+                        for gold in golds:
+                            API.SysMsg(str(gold))
+                            API.MoveItem(gold.Serial,API.Backpack)
+                            if API.Player.Weight/API.Player.WeightMax > 1:
+                                API.SysMsg("Inventory full, offload some weight.", 33)
+                                API.Pause(3)
+                            API.Pause(2)
+            API.Pause(2)
+
+        if loot_insanetokens:
+            while API.FindType(3824,tchest) != None:
+                tokens = API.FindTypeAll(3824,tchest)
+                for token in tokens:
+                    API.MoveItem(token.Serial,API.Backpack)
+                    API.Pause(2)
+                
         #Reset values to recalculate rune
 
 
